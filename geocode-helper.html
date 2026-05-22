@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Geocodificador — Magé</title>
+<style>
+  body { font-family: monospace; padding: 20px; background: #111; color: #0f0; }
+  h2 { color: #fff; }
+  #output { white-space: pre; font-size: 13px; line-height: 1.6; }
+  #result { margin-top: 20px; background: #1a1a1a; border: 1px solid #333; padding: 15px; border-radius: 6px; }
+  button { background: #1565C0; color: #fff; border: none; padding: 10px 24px; font-size: 15px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+  button:hover { background: #1976D2; }
+  #copy { background: #2e7d32; }
+  #status { color: #ffeb3b; margin-top: 8px; }
+</style>
+</head>
+<body>
+<h2>🗺️ Geocodificador de Magé</h2>
+<p style="color:#aaa">Clique no botão abaixo. O script vai geocodificar todos os 28 endereços e exibir o JSON com as coordenadas.</p>
+<button onclick="runGeocode()">▶ Iniciar Geocodificação</button>
+<div id="status"></div>
+<div id="result" style="display:none">
+  <b style="color:#fff">Resultado — cole isso no chat com o Claude:</b>
+  <div id="output"></div>
+  <button id="copy" onclick="copyResult()">📋 Copiar resultado</button>
+</div>
+
+<script>
+const API_KEY = 'AIzaSyAc09-nPxI8mUBGmjGg7MX_9MQsK606q2w';
+
+const addresses = {
+  'd_mage':          'R. dos Expedicionários, 39 - Centro, Magé - RJ, 25903-587, Brasil',
+  'd_guapi':         'Vila Guapi, Guapimirim - RJ, 25940-000, Brasil',
+  'd_surui':         'R. B - Suruí, Magé - RJ, Brasil',
+  'd_inhomirim':     'R. Paraiso, 20 - Parque Sao Jorge, Magé - RJ, 25931-638, Brasil',
+  'd_guia':          'São Lourenço, Magé - RJ, 25926-571, Brasil',
+  'b_bongaba':       'Estr. Mineira, 136 - Parque Veneza, Magé - RJ, Brasil',
+  'b_goya':          'Estr. da Cidade Naval, 183 - São Lourenço, Magé - RJ, Brasil',
+  'b_garapa':        'R. Waldemar Lima Teixeira, 253 - Vila Esperanca, Magé - RJ, Brasil',
+  'b_magemirim':     'Av. Simão da Motta, 363 - Vila Esperanca, Magé - RJ, Brasil',
+  'b_vilainca':      'R. das Jaqueiras, 232 - Vila Rica, Magé - RJ, 25907-530, Brasil',
+  'b_iriri':         'Iriri, Magé, RJ, Brasil',
+  'b_quitungo':      'R. Marquês de Olinda, 162 - Vila Esperanca, Magé - RJ, 25903-640, Brasil',
+  'b_jambalaia':     'R. Jambalaya, 57 - Jardim Nova Marília, Magé - RJ, Brasil',
+  'b_taquaral':      'R. Quarenta e Oito, 159 - Jardim Nova Marília, Magé - RJ, Brasil',
+  'b_gande':         'R. Alcides Chrisóstomo Vargas, 13 - Gandé, Magé - RJ, Brasil',
+  'b_ipiranga':      'R. Maestro Pedro Calil, 225 - Ipiranga, Magé - RJ, 25926-894, Brasil',
+  'b_saofrancisco':  'R. Projetada Três, 73 - São Francisco do Cruará, Magé - RJ, 25925-415, Brasil',
+  'b_piabeta':       'R. Magé, 160 - Piabetá, Magé - RJ, 25931-894, Brasil',
+  'b_parquehumaita': 'Parque Humaitá, Magé - RJ, 25272-430, Brasil',
+  'b_parquecacula':  'R. Vista Alegre, 98 - Parque Caçula, Magé - RJ, 25936-695, Brasil',
+  'q_mariaconga':    'R. Amazonas, 155 - Maria Conga, Magé - RJ, 25901-246, Brasil',
+  'q_bongaba':       'Bongaba, Magé - RJ, Brasil',
+  'q_feital':        'Estr. do Feital - Vila Rica, Magé - RJ, Brasil',
+  'n_monjolo':       'R. Cap. Antero, 3000 - Santo Aleixo, Magé - RJ, 25912-021, Brasil',
+  'n_castelos':      'Chácara Entrerios, Guapimirim - RJ, 25940-000, Brasil',
+  'n_rioinhomirim':  'R. Minas Gerais, 63 - Sobradinho, Magé - RJ, 25932-525, Brasil',
+  'n_riosurui':      'Av. Beira Mar, 995 - Goya, Magé - RJ, 25900-970, Brasil',
+  'n_praiamaua':     'Av. Beira Mar, 479 - Jardim da Paz, Magé - RJ, 25926-690, Brasil',
+};
+
+const direct = {
+  'n_riomage':     [-22.686111, -43.048861],
+  'n_pontagoiana': [-22.695500, -43.116056],
+};
+
+async function geocode(id, address) {
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${API_KEY}&region=br&language=pt-BR`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.status === 'OK') {
+    const loc = data.results[0].geometry.location;
+    return { lat: loc.lat, lng: loc.lng, formatted: data.results[0].formatted_address };
+  }
+  return null;
+}
+
+async function runGeocode() {
+  const statusEl = document.getElementById('status');
+  const ids = Object.keys(addresses);
+  const results = { ...direct };
+  let done = 0;
+
+  for (const id of ids) {
+    statusEl.textContent = `Geocodificando ${done + 1}/${ids.length}: ${id}…`;
+    const r = await geocode(id, addresses[id]);
+    if (r) {
+      results[id] = [parseFloat(r.lat.toFixed(6)), parseFloat(r.lng.toFixed(6))];
+      console.log(`OK  ${id}: ${results[id]}  ${r.formatted}`);
+    } else {
+      console.warn(`FAIL ${id}`);
+    }
+    done++;
+    await new Promise(res => setTimeout(res, 120)); // evitar rate limit
+  }
+
+  statusEl.textContent = `✅ Concluído! ${Object.keys(results).length}/${ids.length + 2} pontos geocodificados.`;
+  const json = JSON.stringify(results, null, 2);
+  document.getElementById('output').textContent = json;
+  document.getElementById('result').style.display = 'block';
+}
+
+function copyResult() {
+  const text = document.getElementById('output').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('copy').textContent = '✅ Copiado!';
+    setTimeout(() => document.getElementById('copy').textContent = '📋 Copiar resultado', 2000);
+  });
+}
+</script>
+</body>
+</html>
