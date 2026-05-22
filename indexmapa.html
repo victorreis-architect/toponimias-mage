@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magé — Memória e Território</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #f5f2eb;
+  --surface:   #ffffff;
+  --surface2:  #f0ede6;
+  --border:    rgba(0,0,0,0.09);
+  --border2:   rgba(0,0,0,0.16);
+  --text:      #1a1a1a;
+  --text2:     #555;
+  --text3:     #999;
+  --accent:    #2d6a4f;
+  --gold:      #8b6914;
+
+  --c-distrito: #1565C0;
+  --c-bairro:   #E65100;
+  --c-quilombo: #B71C1C;
+  --c-biosfera: #1B5E20;
+}
+
+html, body { height: 100%; overflow: hidden; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
+
+/* HEADER */
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border2);
+  padding: 0.75rem 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-shrink: 0;
+}
+
+h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+h1 span {
+  font-size: 0.7rem;
+  font-weight: 400;
+  font-family: 'DM Mono', monospace;
+  color: var(--text3);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 1px;
+}
+
+/* LAYOUT */
+.layout {
+  display: grid;
+  grid-template-columns: 290px 1fr;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* SIDEBAR */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: thin;
+  scrollbar-color: #ddd transparent;
+}
+
+/* SEARCH BOX inside sidebar */
+.sidebar-search {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.sidebar-search input {
+  width: 100%;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 6px 11px;
+  font-size: 0.77rem;
+  font-family: 'DM Mono', monospace;
+  color: var(--text);
+  background: var(--surface2);
+  outline: none;
+}
+.sidebar-search input:focus { border-color: var(--accent); background: white; }
+
+/* CATEGORY */
+.cat { border-bottom: 1px solid var(--border); }
+
+.cat-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--surface2);
+  position: sticky;
+  top: 45px;
+  z-index: 4;
+}
+.cat-head:hover { filter: brightness(0.97); }
+
+.toggle {
+  width: 30px; height: 16px;
+  border-radius: 8px;
+  background: #ccc;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.18s;
+  cursor: pointer;
+}
+.toggle.on { background: var(--cat-color, #555); }
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: white;
+  top: 2.5px; left: 2.5px;
+  transition: transform 0.18s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+.toggle.on::after { transform: translateX(14px); }
+
+.cat-swatch { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+.cat-lbl { font-size: 0.72rem; font-weight: 500; letter-spacing: 1.3px; text-transform: uppercase; color: var(--text2); flex: 1; }
+.cat-n { font-family: 'DM Mono', monospace; font-size: 0.67rem; color: var(--text3); }
+.chevron { font-size: 0.55rem; color: var(--text3); transition: transform 0.18s; }
+.chevron.open { transform: rotate(180deg); }
+
+/* ITEMS */
+.items { overflow: hidden; transition: max-height 0.22s ease; }
+.items.closed { max-height: 0 !important; }
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 12px 5px 16px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.item:hover { background: var(--surface2); }
+.item.hidden-filter { display: none; }
+
+/* Fly button — aparece ao hover no item */
+.item-fly {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+  color: var(--accent);
+  align-self: center;
+  title: 'Ir para no mapa';
+}
+.item:hover .item-fly { opacity: 1; }
+
+.chk {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  border: 1.5px solid #bbb;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  color: white;
+  transition: all 0.14s;
+}
+.chk.on { border-color: transparent; }
+.chk.on::after { content: '✓'; }
+
+.item-text { flex: 1; min-width: 0; }
+.item-name { font-size: 0.81rem; color: var(--text); line-height: 1.3; }
+.item-sub  { font-size: 0.68rem; color: var(--text3); margin-top: 1px; }
+.nm-badge  {
+  display: inline-block;
+  font-size: 0.58rem; font-weight: 500;
+  background: #fff8e1; color: var(--gold);
+  border: 1px solid #ffe082;
+  padding: 1px 5px; border-radius: 3px;
+  margin-top: 2px; letter-spacing: 0.4px;
+}
+
+/* NOTA */
+.sidebar-nota {
+  margin-top: auto;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  font-size: 0.68rem;
+  color: var(--text3);
+  line-height: 1.5;
+}
+
+/* MAP */
+.map-wrap { position: relative; }
+#map { width: 100%; height: 100%; }
+
+/* LOADING */
+.loading {
+  position: absolute; inset: 0;
+  background: rgba(245,242,235,0.88);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  z-index: 40;
+}
+.loading.on { display: flex; }
+.spinner {
+  width: 34px; height: 34px;
+  border: 2.5px solid #ddd;
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading p { font-size: 0.78rem; color: var(--text2); font-family: 'DM Mono', monospace; }
+
+/* TOOLTIP */
+#tip {
+  position: absolute;
+  background: white;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 9px 13px;
+  max-width: 230px;
+  pointer-events: none;
+  z-index: 20;
+  display: none;
+  box-shadow: 0 3px 14px rgba(0,0,0,0.13);
+}
+#tip h4 { font-family: 'Playfair Display', serif; font-size: 0.92rem; color: var(--text); margin-bottom: 3px; }
+#tip .tip-cat { font-size: 0.62rem; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; display: block; }
+#tip p { font-size: 0.74rem; color: var(--text2); line-height: 1.45; }
+
+/* STATUS */
+#status {
+  position: absolute;
+  bottom: 24px; left: 10px;
+  background: white;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.68rem;
+  color: var(--text3);
+  font-family: 'DM Mono', monospace;
+  z-index: 10;
+  display: none;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>Memória &amp; Território</span>Magé</h1>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-search">
+      <input id="filterInput" type="text" placeholder="Filtrar localizações…" oninput="filterItems(this.value)" />
+    </div>
+    <!-- categories injected here by buildSidebar() -->
+  </aside>
+
+  <div class="map-wrap">
+    <div id="map"></div>
+
+    <div class="loading on" id="loading">
+      <div class="spinner"></div>
+      <p id="loadMsg">Carregando mapa…</p>
+    </div>
+
+    <div id="tip">
+      <h4 id="tipNome"></h4>
+      <span class="tip-cat" id="tipCat"></span>
+      <p id="tipDesc"></p>
+    </div>
+
+    <div id="status"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// DADOS — coordenadas hardcoded (convertidas dos Plus Codes fornecidos)
+// centro: [lat, lng]
+// zoom: nível de zoom ao clicar (opcional, padrão 15)
+// rio: true → marcador de ponto
+// nm: true  → não mapeado oficialmente
+// ═══════════════════════════════════════════════════════════════════════════
+const CATS = [
+  {
+    id: 'distrito', label: 'Distritos', cor: '#1565C0',
+    itens: [
+      {
+        id: 'd_mage', nome: 'Magé (1º Distrito)', sub: 'Sede municipal',
+        desc: 'Sede municipal, às margens da Baía de Guanabara. Centro histórico e administrativo.',
+        centro: [-22.6543, -43.0316], zoom: 14
+      },
+      {
+        id: 'd_guapi', nome: 'Guapimirim (2º Distrito)', sub: 'Município desde 1990',
+        desc: 'Em 1990, deixa de ser distrito de Magé e se torna município independente.',
+        centro: [-22.5317, -43.0508], zoom: 13
+      },
+      {
+        id: 'd_surui', nome: 'Suruí (4º Distrito)', sub: 'Pesca e manguezais',
+        desc: 'Conhecido pela pesca, riqueza histórica e manguezais. Nome de origem tupi.',
+        centro: [-22.7163, -43.0914], zoom: 13
+      },
+      {
+        id: 'd_inhomirim', nome: 'Vila Inhomirim (6º Distrito)', sub: 'Piabetá · Fragoso · Pau Grande',
+        desc: 'O distrito mais populoso de Magé (~100 mil hab.). Inclui Piabetá, Fragoso, Pau Grande e Raiz da Serra.',
+        centro: [-22.5975, -43.1703], zoom: 13
+      },
+      {
+        id: 'd_guia', nome: 'Guia de Pacobaíba (5º Dist.)', sub: 'Praia de Mauá · 1ª ferrovia do Brasil',
+        desc: 'Região balneária banhada pela Baía de Guanabara. Sede da primeira estação ferroviária da América do Sul (1854).',
+        centro: [-22.7250, -43.0950], zoom: 13
+      }
+    ]
+  },
+  {
+    id: 'bairro', label: 'Bairros', cor: '#E65100',
+    itens: [
+      {
+        id: 'b_bongaba', nome: 'Bongaba', sub: 'Magé',
+        desc: 'Bairro com presença de comunidade quilombola. Topônimo de provável origem africana.',
+        centro: [-22.6325, -43.1508], zoom: 15
+      },
+      {
+        id: 'b_goya', nome: 'Goya', sub: 'Guia de Pacobaíba',
+        desc: 'Bairro do 5º distrito de Magé, na região de Guia de Pacobaíba.',
+        centro: [-22.7194, -43.0883], zoom: 15
+      },
+      {
+        id: 'b_garapa', nome: 'Garapa', sub: 'Magé sede',
+        desc: 'Bairro do 1º distrito de Magé.',
+        centro: [-22.6508, -43.0261], zoom: 15
+      },
+      {
+        id: 'b_magemirim', nome: 'Magemirim', sub: 'Magé sede',
+        desc: 'Bairro do 1º distrito de Magé.',
+        centro: [-22.6519, -43.0272], zoom: 15
+      },
+      {
+        id: 'b_vilainca', nome: 'Vila Inca', sub: 'Magé sede',
+        desc: 'Bairro do 1º distrito de Magé.',
+        centro: [-22.6469, -43.0311], zoom: 15
+      },
+      {
+        id: 'b_iriri', nome: 'Iriri', sub: 'Magé sede — litoral',
+        desc: 'Bairro à beira da Baía de Guanabara.',
+        centro: [-22.6619, -43.0481], zoom: 15
+      },
+      {
+        id: 'b_quitungo', nome: 'Quitungo ★', sub: 'Origem bantu/indígena',
+        desc: 'Citado por moradores, não aparece em mapas oficiais. Topônimo de origem bantu e indígena.',
+        centro: [-22.6497, -43.0297], zoom: 15, nm: true
+      },
+      {
+        id: 'b_jambalaia', nome: 'Bosque Jambalaia ★', sub: 'Magé',
+        desc: 'Citado por moradores, sem delimitação oficial.',
+        centro: [-22.6461, -43.0275], zoom: 15, nm: true
+      },
+      {
+        id: 'b_taquaral', nome: 'Taquaral ★', sub: 'Magé sede',
+        desc: 'Citado por moradores, sem delimitação oficial.',
+        centro: [-22.6453, -43.0269], zoom: 15, nm: true
+      },
+      {
+        id: 'b_gande', nome: 'Gandé', sub: 'Origem umbundu/angolana',
+        desc: 'Topônimo de possível origem angolana, relacionado à herança africana.',
+        centro: [-22.6469, -43.0258], zoom: 14
+      },
+      {
+        id: 'b_ipiranga', nome: 'Ipiranga', sub: 'Guia de Pacobaíba',
+        desc: 'Bairro na região de Guia de Pacobaíba.',
+        centro: [-22.7453, -43.1089], zoom: 15
+      },
+      {
+        id: 'b_saofrancisco', nome: 'São Francisco de Croará', sub: 'Guia de Pacobaíba',
+        desc: 'Bairro do 5º distrito.',
+        centro: [-22.7272, -43.0853], zoom: 15
+      },
+      {
+        id: 'b_piabeta', nome: 'Piabetá', sub: 'Vila Inhomirim',
+        desc: 'Bairro com estação ferroviária histórica da SuperVia.',
+        centro: [-22.5994, -43.1889], zoom: 14
+      },
+      {
+        id: 'b_parquehumaita', nome: 'Parque Humaitá', sub: 'Magé sede',
+        desc: 'Bairro residencial do 1º distrito de Magé.',
+        centro: [-22.5725, -43.2724], zoom: 15
+      },
+      {
+        id: 'b_parquecacula', nome: 'Parque Caçula', sub: 'Vila Inhomirim — kimbundu',
+        desc: 'Topônimo de origem kimbundu, língua bantu de Angola.',
+        centro: [-22.6231, -43.1136], zoom: 15
+      }
+    ]
+  },
+  {
+    id: 'quilombo', label: 'Quilombos', cor: '#B71C1C',
+    itens: [
+      {
+        id: 'q_mariaconga', nome: 'Quilombo Maria Conga', sub: 'Magé — 1º distrito',
+        desc: 'Maria Conga é figura histórica de resistência negra. Comunidade reconhecida no bairro do Iriri.',
+        centro: [-22.6472, -43.0117], zoom: 16
+      },
+      {
+        id: 'q_bongaba', nome: 'Quilombo Bongaba', sub: 'Magé',
+        desc: 'Comunidade quilombola no bairro de Bongaba. Preserva tradições afrobrasileiras.',
+        centro: [-22.6325, -43.1508], zoom: 16
+      },
+      {
+        id: 'q_feital', nome: 'Quilombo Feital', sub: 'Magé — 1º distrito',
+        desc: 'Comunidade quilombola de Magé com território reconhecido.',
+        centro: [-22.6469, -43.0311], zoom: 16
+      }
+    ]
+  },
+  {
+    id: 'biosfera', label: 'Biosfera & Natureza', cor: '#1B5E20',
+    itens: [
+      {
+        id: 'n_monjolo', nome: 'Cachoeira do Monjolo', sub: 'Topônimo afro-indígena',
+        desc: '"Monjolo": pilão d\'água de origem africana. Localizada na serra, região de Santo Aleixo.',
+        centro: [-22.4231, -43.0747], zoom: 15
+      },
+      {
+        id: 'n_castelos', nome: 'Castelos do Açu', sub: 'Guapimirim — formação rochosa',
+        desc: 'Formação rochosa natural de grande beleza, próxima ao Parque Nacional da Serra dos Órgãos.',
+        centro: [-22.4072, -43.0114], zoom: 14
+      },
+      {
+        id: 'n_rioinhomirim', nome: 'Rio Inhomirim', sub: 'Origem tupi',
+        desc: 'Afluente da Baía de Guanabara. Dá nome ao 6º distrito. Navegado desde o período colonial.',
+        centro: [-22.6150, -43.1581], zoom: 13, rio: true
+      },
+      {
+        id: 'n_riomage', nome: 'Rio Magé', sub: 'Desemboca na Baía de Guanabara',
+        desc: 'Atravessa o município e deságua na Baía de Guanabara, próximo ao 1º distrito.',
+        centro: [-22.6861, -43.0488], zoom: 13, rio: true
+      },
+      {
+        id: 'n_riosurui', nome: 'Rio Suruí', sub: 'Passa pelo 4º distrito',
+        desc: 'Rio que banha o distrito de Suruí antes de desembocar na Baía.',
+        centro: [-22.7158, -43.0681], zoom: 13, rio: true
+      },
+      {
+        id: 'n_praiamaua', nome: 'Praia de Mauá', sub: '5º Distrito — Baía de Guanabara',
+        desc: 'Praia em Guia de Pacobaíba às margens da Baía. Perto da 1ª estação ferroviária do Brasil.',
+        centro: [-22.7378, -43.0994], zoom: 15
+      },
+      {
+        id: 'n_pontagoiana', nome: 'Ponta de Goianã', sub: 'Litoral sul de Magé',
+        desc: 'Ponta litorânea de Magé que avança sobre a Baía de Guanabara.',
+        centro: [-22.6955, -43.1161], zoom: 15
+      }
+    ]
+  }
+];
+
+// ═══════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════
+let gmap = null;
+const markers  = {};   // item.id → google.maps.Marker
+const itemVis  = {};
+const itemCat  = {};
+
+CATS.forEach(c => {
+  c.itens.forEach(item => {
+    itemVis[item.id] = true;
+    itemCat[item.id] = c;
+  });
+});
+
+// ═══════════════════════════════════════
+// SIDEBAR
+// ═══════════════════════════════════════
+function buildSidebar() {
+  const sb = document.getElementById('sidebar');
+
+  CATS.forEach(cat => {
+    const block = document.createElement('div');
+    block.className = 'cat';
+    block.id = `cat-block-${cat.id}`;
+
+    const hd = document.createElement('div');
+    hd.className = 'cat-head';
+    hd.innerHTML = `
+      <div class="toggle on" id="tg-${cat.id}" style="--cat-color:${cat.cor}" title="Ligar/desligar todos"></div>
+      <div class="cat-swatch" style="background:${cat.cor}"></div>
+      <span class="cat-lbl">${cat.label}</span>
+      <span class="cat-n">${cat.itens.length}</span>
+      <span class="chevron open" id="chv-${cat.id}">▼</span>
+    `;
+    hd.addEventListener('click', e => {
+      if (e.target.closest('.toggle')) toggleCat(cat.id);
+      else collapseToggle(cat.id);
+    });
+    block.appendChild(hd);
+
+    const ul = document.createElement('div');
+    ul.className = 'items';
+    ul.id = `ul-${cat.id}`;
+
+    cat.itens.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'item';
+      row.id = `row-${item.id}`;
+      row.innerHTML = `
+        <div class="chk on" id="ck-${item.id}" style="background:${cat.cor}"></div>
+        <div class="item-text">
+          <div class="item-name">${item.nome}</div>
+          ${item.sub ? `<div class="item-sub">${item.sub}</div>` : ''}
+          ${item.nm  ? `<span class="nm-badge">não mapeado oficialmente</span>` : ''}
+          ${item.rio ? `<span class="nm-badge" style="background:#e8f5e9;color:#1B5E20;border-color:#a5d6a7">ponto de referência</span>` : ''}
+        </div>
+        <span class="item-fly" title="Ir para no mapa">⌖</span>
+      `;
+
+      // Clique no ícone de voo → flyTo
+      row.querySelector('.item-fly').addEventListener('click', e => {
+        e.stopPropagation();
+        flyToItem(item.id);
+      });
+
+      // Clique no resto da linha → toggle visibilidade + flyTo se ligar
+      row.addEventListener('click', e => {
+        if (e.target.closest('.item-fly')) return;
+        const nowOn = toggleItem(item.id);
+        if (nowOn) flyToItem(item.id);
+      });
+
+      ul.appendChild(row);
+    });
+
+    block.appendChild(ul);
+    sb.appendChild(block);
+    requestAnimationFrame(() => { ul.style.maxHeight = ul.scrollHeight + 'px'; });
+  });
+
+  const nota = document.createElement('div');
+  nota.className = 'sidebar-nota';
+  nota.textContent = '★ Bairros citados por moradores sem delimitação oficial. Topônimos africanos refletem a história afrodiaspórica do território. Clique em ⌖ para ir direto ao local no mapa.';
+  sb.appendChild(nota);
+}
+
+function collapseToggle(catId) {
+  const ul  = document.getElementById(`ul-${catId}`);
+  const chv = document.getElementById(`chv-${catId}`);
+  if (ul.classList.contains('closed')) {
+    ul.classList.remove('closed');
+    chv.classList.add('open');
+    ul.style.maxHeight = ul.scrollHeight + 'px';
+  } else {
+    ul.style.maxHeight = ul.scrollHeight + 'px';
+    requestAnimationFrame(() => { ul.classList.add('closed'); chv.classList.remove('open'); });
+  }
+}
+
+function toggleCat(catId) {
+  const cat    = CATS.find(c => c.id === catId);
+  const allOn  = cat.itens.every(i => itemVis[i.id]);
+  const newVal = !allOn;
+  cat.itens.forEach(item => {
+    itemVis[item.id] = newVal;
+    setMarkerVisible(item.id, newVal);
+    const ck = document.getElementById(`ck-${item.id}`);
+    if (ck) { ck.classList.toggle('on', newVal); ck.style.background = newVal ? cat.cor : ''; }
+  });
+  document.getElementById(`tg-${catId}`).classList.toggle('on', newVal);
+  updateStatus();
+}
+
+// Retorna o novo estado (true=visível)
+function toggleItem(itemId) {
+  const cat = itemCat[itemId];
+  const val = !itemVis[itemId];
+  itemVis[itemId] = val;
+  setMarkerVisible(itemId, val);
+  const ck = document.getElementById(`ck-${itemId}`);
+  if (ck) { ck.classList.toggle('on', val); ck.style.background = val ? cat.cor : ''; }
+  const allOn = cat.itens.every(i => itemVis[i.id]);
+  document.getElementById(`tg-${cat.id}`).classList.toggle('on', allOn);
+  updateStatus();
+  return val;
+}
+
+function setMarkerVisible(id, visible) {
+  const m = markers[id];
+  if (m) m.setVisible(visible);
+}
+
+// ═══════════════════════════════════════
+// FILTER
+// ═══════════════════════════════════════
+function filterItems(q) {
+  q = q.trim().toLowerCase();
+  CATS.forEach(cat => {
+    let anyVisible = false;
+    cat.itens.forEach(item => {
+      const match = !q
+        || item.nome.toLowerCase().includes(q)
+        || (item.sub  || '').toLowerCase().includes(q)
+        || (item.desc || '').toLowerCase().includes(q)
+        || cat.label.toLowerCase().includes(q);
+      const row = document.getElementById(`row-${item.id}`);
+      if (row) row.classList.toggle('hidden-filter', !match);
+      if (match) anyVisible = true;
+    });
+    const ul  = document.getElementById(`ul-${cat.id}`);
+    const chv = document.getElementById(`chv-${cat.id}`);
+    if (q && anyVisible) {
+      ul.classList.remove('closed');
+      chv.classList.add('open');
+      ul.style.maxHeight = ul.scrollHeight + 200 + 'px';
+    }
+    const block = document.getElementById(`cat-block-${cat.id}`);
+    if (block) block.style.display = anyVisible ? '' : (q ? 'none' : '');
+  });
+}
+
+function updateStatus() {
+  const el  = document.getElementById('status');
+  const vis = Object.keys(markers).filter(id => itemVis[id]).length;
+  el.textContent = `${vis} / ${Object.keys(markers).length} locais visíveis`;
+  el.style.display = 'block';
+}
+
+// ═══════════════════════════════════════
+// MAP INIT
+// ═══════════════════════════════════════
+const GKEY = 'AIzaSyBTlQUqdOcPLp4O5KTCEA5TNLjmkdT8rHA';
+
+(function loadMapScript() {
+  const s = document.createElement('script');
+  s.src = `https://maps.googleapis.com/maps/api/js?key=${GKEY}&callback=initMap`;
+  s.async = true; s.defer = true;
+  document.head.appendChild(s);
+})();
+
+// Endereços internos para geocodificação precisa — não exibidos na interface
+const _ADDR = {
+  'd_mage':          'R. dos Expedicionários, 39 - Centro, Magé - RJ, 25903-587',
+  'd_guapi':         'Vila Guapi, Guapimirim - RJ, 25940-000',
+  'd_surui':         'R. B - Suruí, Magé - RJ',
+  'd_inhomirim':     'R. Paraiso, 20 - Parque Sao Jorge, Magé - RJ, 25931-638',
+  'd_guia':          'São Lourenço, Magé - RJ, 25926-571',
+  'b_bongaba':       'Estr. Mineira, 136 - Parque Veneza, Magé - RJ',
+  'b_goya':          'Estr. da Cidade Naval, 183 - São Lourenço, Magé - RJ',
+  'b_garapa':        'R. Waldemar Lima Teixeira, 253 - Vila Esperanca, Magé - RJ',
+  'b_magemirim':     'Av. Simão da Motta, 363 - Vila Esperanca, Magé - RJ',
+  'b_vilainca':      'R. das Jaqueiras, 232 - Vila Rica, Magé - RJ, 25907-530',
+  'b_iriri':         'Magé, RJ, 25903-587',
+  'b_quitungo':      'R. Marquês de Olinda, 162 - Vila Esperanca, Magé - RJ, 25903-640',
+  'b_jambalaia':     'R. Jambalaya, 57 - Jardim Nova Marília, Magé - RJ',
+  'b_taquaral':      'R. Quarenta e Oito, 159 - Jardim Nova Marília, Magé - RJ',
+  'b_gande':         'R. Alcides Chrisóstomo Vargas, 13 - Gandé, Magé - RJ',
+  'b_ipiranga':      'R. Maestro Pedro Calil, 225 - Ipiranga, Magé - RJ, 25926-894',
+  'b_saofrancisco':  'R. Projetada Três, 73 - São Francisco do Cruará, Magé - RJ, 25925-415',
+  'b_piabeta':       'R. Magé, 160 - Piabetá, Magé - RJ, 25931-894',
+  'b_parquehumaita': 'Parque Humaitá, Magé - RJ, 25272-430',
+  'b_parquecacula':  'R. Vista Alegre, 98 - Parque Caçula, Magé - RJ, 25936-695',
+  'q_mariaconga':    'R. Amazonas, 155 - Maria Conga, Magé - RJ, 25901-246',
+  'q_bongaba':       'Estrada Ile Ifé s/n - Bongaba, Magé - RJ',
+  'q_feital':        'Estr. do Feital - Vila Rica, Magé - RJ',
+  'n_monjolo':       'R. Cap. Antero, 3000 - Santo Aleixo, Magé - RJ, 25912-021',
+  'n_castelos':      'Chácara Entrerios, Magé - RJ, 25940-000',
+  'n_rioinhomirim':  'R. Minas Gerais, 63 - Sobradinho, Magé - RJ, 25932-525',
+  'n_riomage':       '-22.6861,-43.0488',
+  'n_riosurui':      'Av. Beira Mar, 995 - Goya, Magé - RJ, 25900-970',
+  'n_praiamaua':     'Av. Beira Mar, 479 - Jardim da Paz, Magé - RJ, 25926-690',
+  'n_pontagoiana':   '-22.6955,-43.1161'
+};
+
+function geocodeAll(geocoder, callback) {
+  const ids = Object.keys(_ADDR);
+  const results = {};
+  let pending = ids.length;
+  ids.forEach(id => {
+    const val = _ADDR[id];
+    // Coordenadas diretas (lat,lng)
+    if (/^-?\d+\.\d+,-?\d+\.\d+$/.test(val)) {
+      const [lat, lng] = val.split(',').map(Number);
+      results[id] = { lat, lng };
+      if (--pending === 0) callback(results);
+      return;
+    }
+    geocoder.geocode({ address: val, region: 'BR' }, (res, status) => {
+      if (status === 'OK' && res[0]) {
+        const loc = res[0].geometry.location;
+        results[id] = { lat: loc.lat(), lng: loc.lng() };
+      }
+      if (--pending === 0) callback(results);
+    });
+  });
+}
+
+window.initMap = function () {
+  gmap = new google.maps.Map(document.getElementById('map'), {
+    center: { lat: -22.650, lng: -43.060 },
+    zoom: 11,
+    mapTypeId: 'roadmap',
+    disableDefaultUI: true,
+    zoomControl: true,
+    fullscreenControl: true,
+    styles: [
+      { featureType: 'water',         elementType: 'geometry',           stylers: [{ color: '#aad3df' }] },
+      { featureType: 'landscape',     elementType: 'geometry',           stylers: [{ color: '#f2efe9' }] },
+      { featureType: 'road.highway',  elementType: 'geometry',           stylers: [{ color: '#ffffff' }] },
+      { featureType: 'road.highway',  elementType: 'geometry.stroke',    stylers: [{ color: '#d4b483' }, { weight: 1 }] },
+      { featureType: 'road.arterial', elementType: 'geometry',           stylers: [{ color: '#ffffff' }] },
+      { featureType: 'road.local',    elementType: 'geometry',           stylers: [{ color: '#ffffff' }] },
+      { featureType: 'poi.park',      elementType: 'geometry',           stylers: [{ color: '#c8ddc0' }] },
+      { featureType: 'poi',           elementType: 'labels',             stylers: [{ visibility: 'off' }] },
+      { featureType: 'transit',       elementType: 'labels',             stylers: [{ visibility: 'off' }] },
+      { featureType: 'administrative',elementType: 'geometry.stroke',    stylers: [{ color: '#aaaaaa' }, { weight: 0.8 }] },
+      { featureType: 'all',           elementType: 'labels.text.fill',   stylers: [{ color: '#555555' }] },
+      { featureType: 'all',           elementType: 'labels.text.stroke', stylers: [{ color: '#ffffff' }, { weight: 2.5 }] },
+      { featureType: 'water',         elementType: 'labels.text.fill',   stylers: [{ color: '#3a7ea8' }] },
+      { featureType: 'road',          elementType: 'labels.text.fill',   stylers: [{ color: '#777777' }] }
+    ]
+  });
+
+  const geocoder = new google.maps.Geocoder();
+  document.getElementById('loadMsg').textContent = 'Localizando pontos no mapa…';
+  geocodeAll(geocoder, function(coords) {
+    // Atualiza as coordenadas dos itens com os resultados do geocoder
+    CATS.forEach(cat => {
+      cat.itens.forEach(item => {
+        if (coords[item.id]) {
+          item.centro = [coords[item.id].lat, coords[item.id].lng];
+        }
+      });
+    });
+    renderAll();
+    document.getElementById('loading').classList.remove('on');
+    updateStatus();
+  });
+};
+
+// ═══════════════════════════════════════
+// RENDER — tudo via marcadores hardcoded
+// Sem geocoder: posicionamento instantâneo e preciso
+// ═══════════════════════════════════════
+function renderAll() {
+  CATS.forEach(cat => {
+    cat.itens.forEach(item => {
+      makeMarker(item, cat);
+    });
+  });
+}
+
+function makeMarker(item, cat) {
+  const pos = { lat: item.centro[0], lng: item.centro[1] };
+
+  // Tamanho e forma por categoria
+  const isRio      = !!item.rio;
+  const isNM       = !!item.nm;
+  const isQuilombo = cat.id === 'quilombo';
+  const isDistrito = cat.id === 'distrito';
+
+  const scale = isDistrito ? 12 : isQuilombo ? 11 : isRio ? 7 : isNM ? 7 : 9;
+  const opacity = isNM ? 0.55 : 0.90;
+
+  const marker = new google.maps.Marker({
+    position: pos,
+    map: gmap,
+    icon: {
+      path:        google.maps.SymbolPath.CIRCLE,
+      scale:       scale,
+      fillColor:   cat.cor,
+      fillOpacity: opacity,
+      strokeColor: '#ffffff',
+      strokeWeight: isDistrito ? 2.5 : 2
+    },
+    title: item.nome,
+    visible: true
+  });
+
+  marker.addListener('mouseover', () => {
+    showTip(new google.maps.LatLng(pos.lat, pos.lng), item, cat);
+    marker.setIcon({ ...marker.getIcon(), scale: scale + 3, strokeWeight: 3 });
+  });
+  marker.addListener('mouseout', () => {
+    hideTip();
+    marker.setIcon({ ...marker.getIcon(), scale: scale, strokeWeight: isDistrito ? 2.5 : 2 });
+  });
+  marker.addListener('click', () => flyToItem(item.id));
+
+  markers[item.id] = marker;
+}
+
+// Voa para o item no mapa com zoom adequado
+function flyToItem(itemId) {
+  const m = markers[itemId];
+  if (!m) return;
+  const pos = m.getPosition();
+
+  // Busca o item para pegar o zoom preferido
+  let zoom = 15;
+  for (const cat of CATS) {
+    const found = cat.itens.find(i => i.id === itemId);
+    if (found) { zoom = found.zoom || 15; break; }
+  }
+
+  gmap.panTo(pos);
+  gmap.setZoom(zoom);
+
+  // Garante visível
+  if (!itemVis[itemId]) {
+    itemVis[itemId] = true;
+    setMarkerVisible(itemId, true);
+    const cat = itemCat[itemId];
+    const ck = document.getElementById(`ck-${itemId}`);
+    if (ck) { ck.classList.add('on'); ck.style.background = cat.cor; }
+    const allOn = cat.itens.every(i => itemVis[i.id]);
+    document.getElementById(`tg-${cat.id}`).classList.toggle('on', allOn);
+    updateStatus();
+  }
+}
+
+// ═══════════════════════════════════════
+// TOOLTIP
+// ═══════════════════════════════════════
+function showTip(ll, item, cat) {
+  document.getElementById('tipNome').textContent = item.nome;
+  document.getElementById('tipDesc').textContent = item.desc;
+  const c = document.getElementById('tipCat');
+  c.textContent = cat.label; c.style.color = cat.cor;
+  document.getElementById('tip').style.display = 'block';
+  moveTip(ll);
+}
+function hideTip() { document.getElementById('tip').style.display = 'none'; }
+function moveTip(ll) {
+  if (!gmap) return;
+  const tip  = document.getElementById('tip');
+  const proj = gmap.getProjection(); if (!proj) return;
+  const div  = document.getElementById('map').getBoundingClientRect();
+  const sc   = Math.pow(2, gmap.getZoom());
+  const wc   = proj.fromLatLngToPoint(ll);
+  const mc   = proj.fromLatLngToPoint(gmap.getCenter());
+  const px   = (wc.x - mc.x) * sc + div.width  / 2;
+  const py   = (wc.y - mc.y) * sc + div.height / 2;
+  tip.style.left = Math.min(px + 14, div.width  - 244) + 'px';
+  tip.style.top  = Math.max(py - 14, 8)                + 'px';
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+buildSidebar();
+</script>
+</body>
+</html>
