@@ -8,78 +8,77 @@
   h2 { color: #fff; }
   .ok   { color: #4caf50; }
   .fail { color: #f44336; }
-  .info { color: #ffeb3b; }
-  #log  { margin-top: 16px; font-size: 13px; line-height: 1.8; }
+  .info { color: #aaa; }
+  #log  { margin-top: 16px; font-size: 13px; line-height: 1.8; max-height: 400px; overflow-y: auto; }
   #resultBox { margin-top: 20px; background: #1a1a1a; border: 1px solid #444; padding: 16px; border-radius: 6px; display:none; }
-  pre  { white-space: pre-wrap; word-break: break-all; font-size: 12px; }
+  pre  { white-space: pre-wrap; font-size: 12px; color: #0f0; }
   button { background: #1565C0; color: #fff; border: none; padding: 10px 24px; font-size: 15px; border-radius: 5px; cursor: pointer; margin: 4px; }
   #btnCopy { background: #2e7d32; }
+  #progress { color: #ffeb3b; margin-top: 8px; font-size: 14px; }
 </style>
 </head>
 <body>
-<h2>🗺️ Geocodificador de Magé</h2>
-<button onclick="runGeocode()">▶ Iniciar</button>
+<h2>🗺️ Geocodificador de Magé — Nominatim</h2>
+<p style="color:#aaa">Gratuito, sem chave de API. Aguarde ~60s enquanto geocodifica os 28 endereços.</p>
+<button onclick="runGeocode()">▶ Iniciar Geocodificação</button>
+<div id="progress"></div>
 <div id="log"></div>
 <div id="resultBox">
-  <b style="color:#fff">Cole isso no chat:</b>
+  <b style="color:#fff">✅ Pronto! Cole este JSON no chat com o Claude:</b>
   <pre id="output"></pre>
-  <button id="btnCopy" onclick="copyResult()">📋 Copiar</button>
+  <button id="btnCopy" onclick="copyResult()">📋 Copiar resultado</button>
 </div>
 
 <script>
-const KEY = 'AIzaSyAc09-nPxI8mUBGmjGg7MX_9MQsK606q2w';
 const log = document.getElementById('log');
-const addLog = (cls, msg) => { log.innerHTML += `<div class="${cls}">${msg}</div>`; };
+const progress = document.getElementById('progress');
+const addLog = (cls, msg) => { log.innerHTML += `<div class="${cls}">${msg}</div>`; log.scrollTop = log.scrollHeight; };
 
 const ADDR = {
-  'd_mage':         'R. dos Expedicionários, 39, Centro, Magé, RJ, Brasil',
-  'd_guapi':        'Vila Guapi, Guapimirim, RJ, Brasil',
-  'd_surui':        'Suruí, Magé, RJ, Brasil',
-  'd_inhomirim':    'Parque Sao Jorge, Magé, RJ, 25931-638, Brasil',
-  'd_guia':         'São Lourenço, Magé, RJ, 25926-571, Brasil',
-  'b_bongaba':      'Estrada Mineira, 136, Magé, RJ, Brasil',
-  'b_goya':         'Estrada da Cidade Naval, 183, Magé, RJ, Brasil',
-  'b_garapa':       'Rua Waldemar Lima Teixeira, 253, Magé, RJ, Brasil',
-  'b_magemirim':    'Avenida Simão da Motta, 363, Magé, RJ, Brasil',
-  'b_vilainca':     'Rua das Jaqueiras, 232, Magé, RJ, 25907-530, Brasil',
-  'b_iriri':        'Iriri, Magé, RJ, Brasil',
-  'b_quitungo':     'Rua Marquês de Olinda, 162, Magé, RJ, 25903-640, Brasil',
-  'b_jambalaia':    'Rua Jambalaya, 57, Magé, RJ, Brasil',
-  'b_taquaral':     'Rua Quarenta e Oito, 159, Magé, RJ, Brasil',
-  'b_gande':        'Gandé, Magé, RJ, Brasil',
-  'b_ipiranga':     'Rua Maestro Pedro Calil, 225, Magé, RJ, 25926-894, Brasil',
-  'b_saofrancisco': 'São Francisco do Cruará, Magé, RJ, 25925-415, Brasil',
-  'b_piabeta':      'Piabetá, Magé, RJ, 25931-894, Brasil',
-  'b_parquehumaita':'Parque Humaitá, Magé, RJ, Brasil',
-  'b_parquecacula': 'Parque Caçula, Magé, RJ, 25936-695, Brasil',
-  'q_mariaconga':   'Rua Amazonas, 155, Maria Conga, Magé, RJ, 25901-246, Brasil',
-  'q_bongaba':      'Bongaba, Magé, RJ, Brasil',
-  'q_feital':       'Estrada do Feital, Magé, RJ, Brasil',
-  'n_monjolo':      'Santo Aleixo, Magé, RJ, 25912-021, Brasil',
-  'n_castelos':     'Guapimirim, RJ, 25940-000, Brasil',
-  'n_rioinhomirim': 'Sobradinho, Magé, RJ, 25932-525, Brasil',
-  'n_riosurui':     'Avenida Beira Mar, 995, Magé, RJ, 25900-970, Brasil',
-  'n_praiamaua':    'Avenida Beira Mar, 479, Magé, RJ, 25926-690, Brasil',
+  'd_mage':         'Rua dos Expedicionários 39, Centro, Magé, Rio de Janeiro, Brasil',
+  'd_guapi':        'Vila Guapi, Guapimirim, Rio de Janeiro, Brasil',
+  'd_surui':        'Suruí, Magé, Rio de Janeiro, Brasil',
+  'd_inhomirim':    'Parque São Jorge, Magé, Rio de Janeiro, Brasil',
+  'd_guia':         'São Lourenço, Magé, Rio de Janeiro, Brasil',
+  'b_bongaba':      'Estrada Mineira 136, Magé, Rio de Janeiro, Brasil',
+  'b_goya':         'Estrada da Cidade Naval 183, Magé, Rio de Janeiro, Brasil',
+  'b_garapa':       'Rua Waldemar Lima Teixeira 253, Magé, Rio de Janeiro, Brasil',
+  'b_magemirim':    'Avenida Simão da Motta 363, Magé, Rio de Janeiro, Brasil',
+  'b_vilainca':     'Rua das Jaqueiras 232, Vila Rica, Magé, Rio de Janeiro, Brasil',
+  'b_iriri':        'Iriri, Magé, Rio de Janeiro, Brasil',
+  'b_quitungo':     'Rua Marquês de Olinda 162, Magé, Rio de Janeiro, Brasil',
+  'b_jambalaia':    'Rua Jambalaya 57, Magé, Rio de Janeiro, Brasil',
+  'b_taquaral':     'Rua Quarenta e Oito 159, Magé, Rio de Janeiro, Brasil',
+  'b_gande':        'Gandé, Magé, Rio de Janeiro, Brasil',
+  'b_ipiranga':     'Rua Maestro Pedro Calil 225, Ipiranga, Magé, Rio de Janeiro, Brasil',
+  'b_saofrancisco': 'São Francisco do Cruará, Magé, Rio de Janeiro, Brasil',
+  'b_piabeta':      'Piabetá, Magé, Rio de Janeiro, Brasil',
+  'b_parquehumaita':'Parque Humaitá, Magé, Rio de Janeiro, Brasil',
+  'b_parquecacula': 'Parque Caçula, Magé, Rio de Janeiro, Brasil',
+  'q_mariaconga':   'Rua Amazonas 155, Maria Conga, Magé, Rio de Janeiro, Brasil',
+  'q_bongaba':      'Bongaba, Magé, Rio de Janeiro, Brasil',
+  'q_feital':       'Estrada do Feital, Magé, Rio de Janeiro, Brasil',
+  'n_monjolo':      'Santo Aleixo, Magé, Rio de Janeiro, Brasil',
+  'n_castelos':     'Guapimirim, Rio de Janeiro, Brasil',
+  'n_rioinhomirim': 'Sobradinho, Magé, Rio de Janeiro, Brasil',
+  'n_riosurui':     'Avenida Beira Mar 995, Goya, Magé, Rio de Janeiro, Brasil',
+  'n_praiamaua':    'Avenida Beira Mar 479, Magé, Rio de Janeiro, Brasil',
 };
+
 const DIRECT = {
   'n_riomage':    [-22.686111, -43.048861],
   'n_pontagoiana':[-22.695500, -43.116056],
 };
 
 async function geocode(id, addr) {
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addr)}&key=${KEY}&region=br&language=pt-BR`;
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1&countrycodes=br`;
   try {
-    const res = await fetch(url);
-    addLog('info', `${id}: HTTP ${res.status}`);
+    const res = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
     const data = await res.json();
-    addLog('info', `${id}: status=${data.status}`);
-    if (data.status === 'OK') {
-      const l = data.results[0].geometry.location;
-      return [parseFloat(l.lat.toFixed(6)), parseFloat(l.lng.toFixed(6))];
-    } else {
-      addLog('fail', `${id}: ERRO Google → ${data.status} | ${data.error_message || ''}`);
-      return null;
+    if (data && data.length > 0) {
+      return [parseFloat(parseFloat(data[0].lat).toFixed(6)), parseFloat(parseFloat(data[0].lon).toFixed(6))];
     }
+    return null;
   } catch(e) {
     addLog('fail', `${id}: EXCEÇÃO → ${e.message}`);
     return null;
@@ -88,26 +87,162 @@ async function geocode(id, addr) {
 
 async function runGeocode() {
   log.innerHTML = '';
+  document.getElementById('resultBox').style.display = 'none';
   const results = {...DIRECT};
   const ids = Object.keys(ADDR);
-  for (const id of ids) {
-    addLog('info', `Geocodificando: ${id}…`);
+  let ok = 0;
+
+  for (let i = 0; i < ids.length; i++) {
+    const id = ids[i];
+    progress.textContent = `Processando ${i+1}/${ids.length}: ${id}…`;
     const coords = await geocode(id, ADDR[id]);
     if (coords) {
       results[id] = coords;
-      addLog('ok', `✅ ${id}: ${coords}`);
+      addLog('ok', `✅ ${id}: [${coords}]`);
+      ok++;
+    } else {
+      addLog('fail', `❌ ${id}: não encontrado`);
     }
-    await new Promise(r => setTimeout(r, 200));
+    // Nominatim exige 1 req/s
+    await new Promise(r => setTimeout(r, 1100));
   }
+
+  progress.textContent = `✅ Concluído: ${ok + 2}/30 geocodificados (+ 2 diretos)`;
   const json = JSON.stringify(results, null, 2);
   document.getElementById('output').textContent = json;
   document.getElementById('resultBox').style.display = 'block';
-  addLog('ok', `\nConcluído: ${Object.keys(results).length}/30`);
 }
 
 function copyResult() {
   navigator.clipboard.writeText(document.getElementById('output').textContent)
-    .then(() => { document.getElementById('btnCopy').textContent = '✅ Copiado!'; });
+    .then(() => {
+      document.getElementById('btnCopy').textContent = '✅ Copiado!';
+      setTimeout(() => document.getElementById('btnCopy').textContent = '📋 Copiar resultado', 2000);
+    });
+}
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Geocodificador — Magé</title>
+<style>
+  body { font-family: monospace; padding: 20px; background: #111; color: #eee; }
+  h2 { color: #fff; }
+  .ok   { color: #4caf50; }
+  .fail { color: #f44336; }
+  .info { color: #aaa; }
+  #log  { margin-top: 16px; font-size: 13px; line-height: 1.8; max-height: 400px; overflow-y: auto; }
+  #resultBox { margin-top: 20px; background: #1a1a1a; border: 1px solid #444; padding: 16px; border-radius: 6px; display:none; }
+  pre  { white-space: pre-wrap; font-size: 12px; color: #0f0; }
+  button { background: #1565C0; color: #fff; border: none; padding: 10px 24px; font-size: 15px; border-radius: 5px; cursor: pointer; margin: 4px; }
+  #btnCopy { background: #2e7d32; }
+  #progress { color: #ffeb3b; margin-top: 8px; font-size: 14px; }
+</style>
+</head>
+<body>
+<h2>🗺️ Geocodificador de Magé — Nominatim</h2>
+<p style="color:#aaa">Gratuito, sem chave de API. Aguarde ~60s enquanto geocodifica os 28 endereços.</p>
+<button onclick="runGeocode()">▶ Iniciar Geocodificação</button>
+<div id="progress"></div>
+<div id="log"></div>
+<div id="resultBox">
+  <b style="color:#fff">✅ Pronto! Cole este JSON no chat com o Claude:</b>
+  <pre id="output"></pre>
+  <button id="btnCopy" onclick="copyResult()">📋 Copiar resultado</button>
+</div>
+
+<script>
+const log = document.getElementById('log');
+const progress = document.getElementById('progress');
+const addLog = (cls, msg) => { log.innerHTML += `<div class="${cls}">${msg}</div>`; log.scrollTop = log.scrollHeight; };
+
+const ADDR = {
+  'd_mage':         'Rua dos Expedicionários 39, Centro, Magé, Rio de Janeiro, Brasil',
+  'd_guapi':        'Vila Guapi, Guapimirim, Rio de Janeiro, Brasil',
+  'd_surui':        'Suruí, Magé, Rio de Janeiro, Brasil',
+  'd_inhomirim':    'Parque São Jorge, Magé, Rio de Janeiro, Brasil',
+  'd_guia':         'São Lourenço, Magé, Rio de Janeiro, Brasil',
+  'b_bongaba':      'Estrada Mineira 136, Magé, Rio de Janeiro, Brasil',
+  'b_goya':         'Estrada da Cidade Naval 183, Magé, Rio de Janeiro, Brasil',
+  'b_garapa':       'Rua Waldemar Lima Teixeira 253, Magé, Rio de Janeiro, Brasil',
+  'b_magemirim':    'Avenida Simão da Motta 363, Magé, Rio de Janeiro, Brasil',
+  'b_vilainca':     'Rua das Jaqueiras 232, Vila Rica, Magé, Rio de Janeiro, Brasil',
+  'b_iriri':        'Iriri, Magé, Rio de Janeiro, Brasil',
+  'b_quitungo':     'Rua Marquês de Olinda 162, Magé, Rio de Janeiro, Brasil',
+  'b_jambalaia':    'Rua Jambalaya 57, Magé, Rio de Janeiro, Brasil',
+  'b_taquaral':     'Rua Quarenta e Oito 159, Magé, Rio de Janeiro, Brasil',
+  'b_gande':        'Gandé, Magé, Rio de Janeiro, Brasil',
+  'b_ipiranga':     'Rua Maestro Pedro Calil 225, Ipiranga, Magé, Rio de Janeiro, Brasil',
+  'b_saofrancisco': 'São Francisco do Cruará, Magé, Rio de Janeiro, Brasil',
+  'b_piabeta':      'Piabetá, Magé, Rio de Janeiro, Brasil',
+  'b_parquehumaita':'Parque Humaitá, Magé, Rio de Janeiro, Brasil',
+  'b_parquecacula': 'Parque Caçula, Magé, Rio de Janeiro, Brasil',
+  'q_mariaconga':   'Rua Amazonas 155, Maria Conga, Magé, Rio de Janeiro, Brasil',
+  'q_bongaba':      'Bongaba, Magé, Rio de Janeiro, Brasil',
+  'q_feital':       'Estrada do Feital, Magé, Rio de Janeiro, Brasil',
+  'n_monjolo':      'Santo Aleixo, Magé, Rio de Janeiro, Brasil',
+  'n_castelos':     'Guapimirim, Rio de Janeiro, Brasil',
+  'n_rioinhomirim': 'Sobradinho, Magé, Rio de Janeiro, Brasil',
+  'n_riosurui':     'Avenida Beira Mar 995, Goya, Magé, Rio de Janeiro, Brasil',
+  'n_praiamaua':    'Avenida Beira Mar 479, Magé, Rio de Janeiro, Brasil',
+};
+
+const DIRECT = {
+  'n_riomage':    [-22.686111, -43.048861],
+  'n_pontagoiana':[-22.695500, -43.116056],
+};
+
+async function geocode(id, addr) {
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1&countrycodes=br`;
+  try {
+    const res = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
+    const data = await res.json();
+    if (data && data.length > 0) {
+      return [parseFloat(parseFloat(data[0].lat).toFixed(6)), parseFloat(parseFloat(data[0].lon).toFixed(6))];
+    }
+    return null;
+  } catch(e) {
+    addLog('fail', `${id}: EXCEÇÃO → ${e.message}`);
+    return null;
+  }
+}
+
+async function runGeocode() {
+  log.innerHTML = '';
+  document.getElementById('resultBox').style.display = 'none';
+  const results = {...DIRECT};
+  const ids = Object.keys(ADDR);
+  let ok = 0;
+
+  for (let i = 0; i < ids.length; i++) {
+    const id = ids[i];
+    progress.textContent = `Processando ${i+1}/${ids.length}: ${id}…`;
+    const coords = await geocode(id, ADDR[id]);
+    if (coords) {
+      results[id] = coords;
+      addLog('ok', `✅ ${id}: [${coords}]`);
+      ok++;
+    } else {
+      addLog('fail', `❌ ${id}: não encontrado`);
+    }
+    // Nominatim exige 1 req/s
+    await new Promise(r => setTimeout(r, 1100));
+  }
+
+  progress.textContent = `✅ Concluído: ${ok + 2}/30 geocodificados (+ 2 diretos)`;
+  const json = JSON.stringify(results, null, 2);
+  document.getElementById('output').textContent = json;
+  document.getElementById('resultBox').style.display = 'block';
+}
+
+function copyResult() {
+  navigator.clipboard.writeText(document.getElementById('output').textContent)
+    .then(() => {
+      document.getElementById('btnCopy').textContent = '✅ Copiado!';
+      setTimeout(() => document.getElementById('btnCopy').textContent = '📋 Copiar resultado', 2000);
+    });
 }
 </script>
 </body>
